@@ -868,7 +868,7 @@ class VFD(Base):
 		return "VFD" + self._vfdType
 
 	def __str__(self):
-		return "<Filter(vfdId = '%d', AHUNumber = '%d', vfdName = '%d',  vfdType = '%s')>" % (self._vfdId, self._AHUNumber, self._vfdName, self._vfdType)
+		return "<Filter(vfdId = '%d', AHUNumber = '%d', vfdName = '%s',  vfdType = '%s')>" % (self._vfdId, self._AHUNumber, self._vfdName, self._vfdType)
 
 
 class VFDReading(Base):
