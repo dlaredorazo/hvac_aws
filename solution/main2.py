@@ -14,7 +14,7 @@ from db import hvacDBMapping
 from sqlalchemy import and_
 
 read_objects = {
-    'ahu':[hvacDBMapping.AHUReading, hvacDBMapping.AHUReading._AHUNumber, hvacDBMapping.AHUReading._timestamp, 4,
+    'ahu':[hvacDBMapping.AHUReading, hvacDBMapping.AHUReading._AHUNumber, hvacDBMapping.AHUReading._timestamp, 5,
      '2018-07-11'],
     'vfd':[hvacDBMapping.VFDReading, hvacDBMapping.VFDReading._vfdId, hvacDBMapping.AHUReading._timestamp, 1,
      '2018-07-11'],
@@ -34,13 +34,11 @@ read_objects = {
      hvacDBMapping.ThermafuserReading._timestamp, 1, '2018-07-11']
 }
 
-
-
 def get_sql_records(object_type, object_key, object_timestamp, key, timestamp, limit=10):
 
     #sqlsession, sqlengine = auxiliary.connect_to_db('localhost', 'hvac2018_04', 'dlaredo', '@Dexsys13')
 
-    sqlsession, sqlengine = auxiliary.connect_to_db('factory1.czy5c8ouxr1q.us-west-2.rds.amazonaws.com', 'hvac2018_04', 'admin', 'Dexsys131')
+    sqlsession, sqlengine = auxiliary.connect_to_db('factory2.czy5c8ouxr1q.us-west-2.rds.amazonaws.com', 'hvac2018_04', 'admin', 'Dexsys131')
 
     q = sqlsession.query(object_type).filter(and_(object_key == key, object_timestamp >= timestamp))
 
@@ -125,6 +123,28 @@ if __name__ == '__main__':
 
     #stream_to_firehose('thermafuser')
 
+    # Get all the components that are related to the AHU
+    sqlsession, sqlengine = auxiliary.connect_to_db('factory2.czy5c8ouxr1q.us-west-2.rds.amazonaws.com', 'hvac2018_04',
+                                                    'admin', 'Dexsys131')
+    q = sqlsession.query(hvacDBMapping.AHU).filter(hvacDBMapping.AHU._AHUNumber == 4)
+    ahu = q.first()
+    all_fans = ahu.fans
+    all_dampers = ahu.dampers
+    all_filters = ahu.filters
+    all_hecs = ahu.hecs
+    all_savs = ahu.savs
+    all_vavs = ahu.vavs
+    all_thermafusers = ahu.thermafusers
+
+
+    fans = [fan for fan in all_fans if (fan._fanId == 15 or fan.fanId == 20)]
+    dampers = all_dampers[:]
+    filters = all_filters[:]
+    hecs = all_hecs[:]
+    vavs = [vav for vav in all_vavs if (vav._VAVId == 17 or vav.VAVId == 18)]
+    thermafusers = [thermafuser for thermafuser in all_thermafusers if thermafuser.thermafuserId in list(range(61, 66))]
+
+
     """
     time_d = datetime.datetime(year=2018, month=7, day=11)
     time_plus_d = time_d + datetime.timedelta(seconds=1)
@@ -140,11 +160,13 @@ if __name__ == '__main__':
             print(result)
     """
 
+    """
     try:
         with concurrent.futures.ThreadPoolExecutor() as executor:
             executor.map(stream_to_firehose, object_types)
     except (KeyboardInterrupt, SystemExit):
         sys.exit()
+    """
 
     #output = [p.get() for p in results]
     #print(output)

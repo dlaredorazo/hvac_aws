@@ -1030,7 +1030,7 @@ class Filter(Base):
 		return "Filter" + self._filterType
 
 	def __str__(self):
-		return "<Filter(filterId = '%d', AHUNumber = '%d', filterName = '%d', filterType = '%s')>" % (self._filterId, self._AHUNumber, self._filterName, self._filterType)
+		return "<Filter(filterId = '%d', AHUNumber = '%d', filterName = '%s', filterType = '%s')>" % (self._filterId, self._AHUNumber, self._filterName, self._filterType)
 
 
 class FilterReading(Base):
@@ -1183,7 +1183,7 @@ class Damper(Base):
 		return "Damper" + self._damperType
 
 	def __str__(self):
-		return "<Damper(damperId = '%d', AHUNumber = '%d', damperName = '%d', damperType = '%s')>" % (self._damperId, self._AHUNumber, self._damperName, self._damperType)
+		return "<Damper(damperId = '%d', AHUNumber = '%d', damperName = '%s', damperType = '%s')>" % (self._damperId, self._AHUNumber, self._damperName, self._damperType)
 
 
 class DamperReading(Base):
@@ -1337,7 +1337,7 @@ class Fan(Base):
 		return "Fan" + self._fanType
 
 	def __str__(self):
-		return "<Fan(fanId = '%d', AHUNumber = '%d', fanName = '%d', fanType = '%s')>" % (self._fanId, self._AHUNumber, self._fanName, self._fanType)
+		return "<Fan(fanId = '%d', AHUNumber = '%d', fanName = '%s', fanType = '%s')>" % (self._fanId, self._AHUNumber, self._fanName, self._fanType)
 
 
 class FanReading(Base):
@@ -1541,8 +1541,8 @@ class HEC(Base):
 		return "HEC" + self._HECType
 
 	def __str__(self):
-		return "<HEC(HECId = '%d', AHUNumber = '%d', HECName = '%d', HECType = '%s', SAVId = '%d', VAVId = '%d')>" \
-		% (self._HECId, self._AHUNumber, self._HECName, self._HECType, self._SAVId, self._VAVId)
+		return "<HEC(HECId = '%d', AHUNumber = '%s', HECName = '%s', HECType = '%s', SAVId = '%s', VAVId = '%s')>" \
+		% (self._HECId, str(self._AHUNumber), self._HECName, self._HECType, str(self._SAVId), str(self._VAVId))
 
 
 class HECReading(Base):
@@ -1726,7 +1726,7 @@ class SAV(Base):
 		return "SAV"
 
 	def __str__(self):
-		return "<SAV(SAVId = '%d', AHUNumber = '%d', SAVName = '%d')>" % (self._SAVId, self._SAVName)
+		return "<SAV(SAVId = '%d', AHUNumber = '%d', SAVName = '%s')>" % (self._SAVId, self._SAVName)
 
 
 class SAVReading(Base):
@@ -2032,7 +2032,7 @@ class VAV(Base):
 		return "VAV"
 
 	def __str__(self):
-		return "<VAV(VAVId = '%d', AHUNumber = '%d', VAVName = '%d')>" % (self._VAVId, self._AHUNumber, self._VAVName)
+		return "<VAV(VAVId = '%d', AHUNumber = '%d', VAVName = '%s')>" % (self._VAVId, self._AHUNumber, self._VAVName)
 
 
 class VAVReading(Base):
@@ -2280,8 +2280,8 @@ class Thermafuser(Base):
 		return "Thermafuser"
 
 	def __str__(self):
-		return "<Thermafuser(thermafuserId = '%d', AHUNumber = '%d', SAVId = '%d', VAVId = '%d', thermafuserName = '%d')>" \
-		% (self._thermafuserId, self._AHUNumber, self._SAVId, self._VAVId, self._thermafuserName)
+		return "<Thermafuser(thermafuserId = '%d', AHUNumber = '%s', SAVId = '%s', VAVId = '%s', thermafuserName = '%s')>" \
+		% (self._thermafuserId, str(self._AHUNumber), str(self._SAVId), str(self._VAVId), str(self._thermafuserName))
 
 
 class ThermafuserReading(Base):
