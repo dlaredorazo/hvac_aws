@@ -1,0 +1,31 @@
+CREATE EXTERNAL TABLE `fan_parquetoctank_america_hvac_fan`(
+  `timestamp` string, 
+  `airvelocitypressure` float, 
+  `airvelocitycfm` float, 
+  `factoryid` tinyint, 
+  `objectid` tinyint, 
+  `datehour` string)
+PARTITIONED BY ( 
+  `partition_0` string, 
+  `partition_1` string, 
+  `partition_2` string, 
+  `partition_3` string)
+ROW FORMAT SERDE 
+  'org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe' 
+STORED AS INPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetInputFormat' 
+OUTPUTFORMAT 
+  'org.apache.hadoop.hive.ql.io.parquet.MapredParquetOutputFormat'
+LOCATION
+  's3://octank-america-hvac-fan/'
+TBLPROPERTIES (
+  'CrawlerSchemaDeserializerVersion'='1.0', 
+  'CrawlerSchemaSerializerVersion'='1.0', 
+  'UPDATED_BY_CRAWLER'='fan_crawler', 
+  'averageRecordSize'='63', 
+  'classification'='parquet', 
+  'compressionType'='none', 
+  'objectCount'='51', 
+  'recordCount'='647', 
+  'sizeKey'='66004', 
+  'typeOfData'='file')

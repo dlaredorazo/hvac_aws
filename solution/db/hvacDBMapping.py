@@ -488,6 +488,18 @@ class AHU(Base):
 	def thermafusers(self, value):
 		self._thermafusers = value
 
+	@property
+	def name(self):
+		return self._AHUName
+
+	@property
+	def componentId(self):
+		return self._AHUNumber
+
+	@property
+	def componentType(self):
+		return 'AHU'
+
 	#Methods
 
 	def getComponentName(self):
@@ -859,6 +871,17 @@ class VFD(Base):
 	def vfdReadings(self, value):
 		self._vfdReadings = value
 
+	@property
+	def name(self):
+		return self._vfdName
+
+	@property
+	def componentId(self):
+		return self._vfdId
+
+	@property
+	def componentType(self):
+		return self._vfdType
 	#Methods
 
 	def getComponentName(self):
@@ -868,7 +891,7 @@ class VFD(Base):
 		return "VFD" + self._vfdType
 
 	def __str__(self):
-		return "<Filter(vfdId = '%d', AHUNumber = '%d', vfdName = '%s',  vfdType = '%s')>" % (self._vfdId, self._AHUNumber, self._vfdName, self._vfdType)
+		return "<VFD(vfdId = '%d', AHUNumber = '%d', vfdName = '%s',  vfdType = '%s')>" % (self._vfdId, self._AHUNumber, self._vfdName, self._vfdType)
 
 
 class VFDReading(Base):
@@ -943,7 +966,7 @@ class VFDReading(Base):
 		return json_text
 
 	def __str__(self):
-		return "<FilterReading(timestamp = '%s', vfdId = '%s', powerKW = '%s', speedRPM = '%s')>" % (str(self._timestamp), self._vfdId, self._powerKW, self._speedRPM)
+		return "<VFDReading(timestamp = '%s', vfdId = '%s', powerKW = '%s', speedRPM = '%s')>" % (str(self._timestamp), self._vfdId, self._powerKW, self._speedRPM)
 
 
 class Filter(Base):
@@ -1020,6 +1043,18 @@ class Filter(Base):
 	@filterReadings.setter
 	def filterReadings(self, value):
 		self._filterReadings = value
+
+	@property
+	def name(self):
+		return self._filterName
+
+	@property
+	def componentId(self):
+		return self._filterId
+
+	@property
+	def componentType(self):
+		return self._filterType
 
 	#Methods
 
@@ -1174,6 +1209,18 @@ class Damper(Base):
 	def damperReadings(self, value):
 		self._damperReadings = value
 
+	@property
+	def name(self):
+		return self._damperName
+
+	@property
+	def componentId(self):
+		return self._damperId
+
+	@property
+	def componentType(self):
+		return self._damperType
+
 	#Methods
 
 	def getComponentName(self):
@@ -1327,6 +1374,18 @@ class Fan(Base):
 	@fanReadings.setter
 	def fanReadings(self, value):
 		self._fanReadings = value
+
+	@property
+	def name(self):
+		return self._fanName
+
+	@property
+	def componentId(self):
+		return self._fanId
+
+	@property
+	def componentType(self):
+		return self._fanType
 
 	#Methods
 
@@ -1532,6 +1591,18 @@ class HEC(Base):
 	def hecReadings(self, value):
 		self._hecReadings = value
 
+	@property
+	def name(self):
+		return self._HECName
+
+	@property
+	def componentId(self):
+		return self._HECId
+
+	@property
+	def componentType(self):
+		return self._HECType
+
 	#Methods
 
 	def getComponentName(self):
@@ -1716,6 +1787,18 @@ class SAV(Base):
 	@SAVReadings.setter
 	def SAVReadings(self, value):
 		self._SAVReadings = value
+
+	@property
+	def name(self):
+		return self._SAVName
+
+	@property
+	def componentId(self):
+		return self._SAVId
+
+	@property
+	def componentType(self):
+		return 'SAV'
 
 	#Methods
 
@@ -2023,6 +2106,18 @@ class VAV(Base):
 	def VAVReadings(self, value):
 		self._VAVReadings = value
 
+	@property
+	def name(self):
+		return self._VAVName
+
+	@property
+	def componentId(self):
+		return self._VAVId
+
+	@property
+	def componentType(self):
+		return 'VAV'
+
 	#Methods
 
 	def getComponentName(self):
@@ -2270,6 +2365,18 @@ class Thermafuser(Base):
 	@thermafuserReadings.setter
 	def thermafuserReadings(self, value):
 		self._thermafuserReadings = value
+
+	@property
+	def name(self):
+		return self._thermafuserName
+
+	@property
+	def componentId(self):
+		return self._thermafuserId
+
+	@property
+	def componentType(self):
+		return 'Thermafuser'
 
 	#Methods
 
