@@ -8,6 +8,7 @@ import datetime
 from multiprocessing import Pool
 import concurrent.futures
 import re
+import traceback
 
 from common import auxiliary
 from db import hvacDBMapping
@@ -29,7 +30,7 @@ read_objects = {
      hvacDBMapping.ThermafuserReading._timestamp, '2018-07-11'], 'objs':None}
 }
 
-def records_to_timestream_format(record, timestream_write_client):
+def records_to_timestream_format(record, timestream_write_client, obj_type_str):
     print("Writing records")
     app_logger = logging.getLogger(__name__)
 
@@ -46,10 +47,6 @@ def records_to_timestream_format(record, timestream_write_client):
     excludedKeys = set(['factoryId', 'objectId', 'name', 'type', 'timestamp', 'timestamp_timestream'])
     includedKeys = record.keys() - excludedKeys
 
-    #ts_record = {'Dimensions': dimensions, 'Time': record['timestamp']}
-
-    #print(ts_record)
-
     try:
         for key in includedKeys:
 
@@ -57,34 +54,19 @@ def records_to_timestream_format(record, timestream_write_client):
             match = re.search('^\<class\s\'(.*)\'\>$', d_type)
 
             if match:
-                #print('it matched')
                 d_type = match.group(1)
-                #print(d_type)
-                ts_record = {'Dimensions': dimensions, 'MeasureName': key, 'MeasureValue': str(record[key]), 'MeasureValueType':d_types[d_type], 'Time': record['timestamp_timestream']}
-                #copy_record = ts_record.copy()
-                #print(copy_record)
-                records.append(ts_record)
+                if d_type in d_types:
+                    ts_record = {'Dimensions': dimensions, 'MeasureName': key, 'MeasureValue': str(record[key]), 'MeasureValueType':d_types[d_type], 'Time': record['timestamp_timestream']}
+                    records.append(ts_record)
             else:
                 continue
 
-        print(records)
     except Exception as err:
         print("Error:", err)
         app_logger.error(err)
 
-
-    """
-    cpu_utilization = {
-        'Dimensions': dimensions,
-        'MeasureName': 'cpu_utilization',
-        'MeasureValue': '13.5',
-        'MeasureValueType': 'DOUBLE',
-        'Time': current_time
-    }
-    """
-
     try:
-        result = timestream_write_client.write_records(DatabaseName='octank-america-hvac', TableName='thermafuser_test',
+        result = timestream_write_client.write_records(DatabaseName='octank-america-hvac', TableName=obj_type_str+'_readings',
                                            Records=records, CommonAttributes={})
         print("WriteRecords Status: [%s]" % result['ResponseMetadata']['HTTPStatusCode'])
     except Exception as err:
@@ -99,66 +81,47 @@ def get_sql_records(object_type, object_key, object_timestamp, key, timestamp, l
 
     q = sqlsession.query(object_type).filter(and_(object_key == key, object_timestamp >= timestamp))
 
-    #print(key)
-    #print(timestamp)
-    #print(q)
-
-    #q = sqlsession.query(hvacDBMapping.ThermafuserReading).filter(and_(hvacDBMapping.ThermafuserReading._timestamp < '2020-12-31'))
     results = q.limit(limit).all()
 
     return results
 
 
 def stream_to_firehose(object_type_str):
-    #print(q)
 
     sql_results = {}
-    bd_buffer = 10
+    db_buffer = 1000
+    time_delta_secs = 5
 
     try:
         app_logger = logging.getLogger(__name__)
         object_type, object_key, object_timestamp, timestamp = read_objects[object_type_str]['params']
         object_details = read_objects[object_type_str]['objs']
 
-        #for obj in object_details:
-        #    print(obj)
-
         objs_metadata = {obj.componentId:[obj.name, obj.componentType] for obj in object_details}
 
-        #print(objs_metadata)
-
-        #print(objs_metadata)
-
-        #objs_id = read_objects[object_type_str]['ids']
-        start_time = datetime.datetime.strptime(timestamp, '%Y-%m-%d')
-
-        #print(object_type_str)
-
-        #for obj_id in objs_id:
-        #    print(object_type_str + ': %d', obj_id)
+        query_time = datetime.datetime.strptime(timestamp, '%Y-%m-%d')
 
         aws_session = boto3.session.Session()
         kinesis_client = aws_session.client('firehose', region_name='us-west-2')
         stream_name = object_type_str + '1-20210310'
         timestream_write_client = aws_session.client('timestream-write', config=Config(read_timeout=20, max_pool_connections=5000,
                                                                         retries={'max_attempts': 10}))
-        #print(stream_name)
-
-        #print(objs_id)
 
         for key in objs_metadata.keys():
-            #print(object_type_str + ': {}'.format(key))
-            #print(objs_metadata[key])
             sql_results[key] = {}
-            sql_results[key]['data'] = get_sql_records(object_type, object_key, object_timestamp, key, start_time, bd_buffer)
+            sql_results[key]['data'] = get_sql_records(object_type, object_key, object_timestamp, key, query_time, db_buffer)
             sql_results[key]['max_records'] = len(sql_results[key]['data'])
             sql_results[key]['current_record'] = 0
-            #print(len(sql_results[key]['data']))
+            sql_results[key]['start_time'] = query_time
 
     except Exception as e:
         app_logger.error(e)
+        print(traceback.print_exc())
+        app_logger.error(traceback.print_exc())
 
     while True:
+
+        #print(sql_results)
 
         stream_results = []
 
@@ -170,19 +133,30 @@ def stream_to_firehose(object_type_str):
 
                 if sql_results[key]['current_record'] == sql_results[key]['max_records']:
 
-                    start_time = start_time + datetime.timedelta(seconds=1)
+                    query_time = sql_results[key]['start_time']
+                    query_time = query_time + datetime.timedelta(seconds=time_delta_secs)
                     app_logger.error('Getting new batch of data for {}\n'.format(key))
-                    records = get_sql_records(object_type, object_key, object_timestamp, key, start_time, bd_buffer)
+                    print('Getting new batch of data for {}\n'.format(key))
+                    print(query_time)
+                    records = get_sql_records(object_type, object_key, object_timestamp, key, query_time, db_buffer)
 
                     if not records:
                         app_logger.error('Resetting time for {}\n'.format(key))
-                        start_time = datetime.datetime.strptime(timestamp, '%Y-%m-%d')
-                        records = get_sql_records(object_type, object_key, object_timestamp, key, start_time, bd_buffer)
+                        query_time = datetime.datetime.strptime(timestamp, '%Y-%m-%d')
+                        records = get_sql_records(object_type, object_key, object_timestamp, key, query_time, db_buffer)
 
                     data = records[:]
-                    sql_results[key]['data'] = records[:]
-                    sql_results[key]['max_records'] = len(sql_results[key]['data'])
+                    sql_results[key]['data'] = data
+                    sql_results[key]['max_records'] = len(data)
                     sql_results[key]['current_record'] = 0
+                    #print(data[-1])
+                    sql_results[key]['start_time'] = data[-1].timestamp
+
+                    #print('\n\n')
+                    #print(sql_results[key]['max_records'])
+                    #print(sql_results[key]['current_record'])
+
+                    #time.sleep(5)
 
                 else:
                     data = sql_results[key]['data']
@@ -198,15 +172,16 @@ def stream_to_firehose(object_type_str):
                 msg['objectId'] = str(result['key'])
                 msg['name'] = objs_metadata[result['key']][0]
                 msg['type'] = objs_metadata[result['key']][1]
-                #app_logger.error(msg)
-                #print(msg)
-                records_to_timestream_format(msg, timestream_write_client)
+
+                records_to_timestream_format(msg, timestream_write_client, object_type_str)
                 #kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
 
             time.sleep(5)
 
         except Exception as e:
             app_logger.error(e)
+            print(traceback.print_exc())
+            app_logger.error(traceback.print_exc())
             break
 
     return None
@@ -228,10 +203,10 @@ if __name__ == '__main__':
     #stream_to_kinesis()
 
     #object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec', 'sav', 'vav']
-    #object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec']
+    object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec']
     #object_types = ['damper', 'fan']
     #object_types = ['vfd', 'damper', 'hec', 'sav', 'vav']
-    object_types = ['thermafuser']
+    #object_types = ['thermafuser']
 
     #stream_to_firehose('thermafuser')
 
