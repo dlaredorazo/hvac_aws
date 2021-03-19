@@ -63,7 +63,8 @@ def records_to_timestream_format(record, timestream_write_client, obj_type_str):
 
     except Exception as err:
         print("Error:", err)
-        app_logger.error(err)
+        print(traceback.print_exc())
+        app_logger.error(traceback.print_exc())
 
     try:
         result = timestream_write_client.write_records(DatabaseName='octank-america-hvac', TableName=obj_type_str+'_readings',
@@ -76,6 +77,8 @@ def records_to_timestream_format(record, timestream_write_client, obj_type_str):
         #print("WriteRecords Status: [%s]" % result['ResponseMetadata']['HTTPStatusCode'])
     except Exception as err:
         print("Error:", err)
+        print(traceback.print_exc())
+        app_logger.error(traceback.print_exc())
 
 
 def get_sql_records(object_type, object_key, object_timestamp, key, timestamp, limit=10):
@@ -183,6 +186,8 @@ def stream_to_firehose(object_type_str):
                 if result['ResponseMetadata']['HTTPStatusCode'] != 200:
                     print('Status: ' + str(result['ResponseMetadata']))
                     app_logger.error('Status: ' + str(result['ResponseMetadata']))
+                    print(traceback.print_exc())
+                    app_logger.error(traceback.print_exc())
 
             time.sleep(5)
 
