@@ -31,7 +31,7 @@ read_objects = {
 }
 
 def records_to_timestream_format(record, timestream_write_client, obj_type_str):
-    print("Writing records")
+    #print("Writing records")
     app_logger = logging.getLogger(__name__)
 
     d_types = {'int':'BIGINT', 'float':'DOUBLE', 'bool':'BOOLEAN'}
@@ -68,7 +68,12 @@ def records_to_timestream_format(record, timestream_write_client, obj_type_str):
     try:
         result = timestream_write_client.write_records(DatabaseName='octank-america-hvac', TableName=obj_type_str+'_readings',
                                            Records=records, CommonAttributes={})
-        print("WriteRecords Status: [%s]" % result['ResponseMetadata']['HTTPStatusCode'])
+
+        if result['ResponseMetadata']['HTTPStatusCode'] != 200:
+            print('Status: ' + str(result['ResponseMetadata']))
+            app_logger.error('Status: ' + str(result['ResponseMetadata']))
+
+        #print("WriteRecords Status: [%s]" % result['ResponseMetadata']['HTTPStatusCode'])
     except Exception as err:
         print("Error:", err)
 
@@ -92,8 +97,10 @@ def stream_to_firehose(object_type_str):
     db_buffer = 1000
     time_delta_secs = 5
 
+    print('Writing data to streams: ' + object_type_str)
+    app_logger.error('Writing data to streams: ' + object_type_str)
+
     try:
-        app_logger = logging.getLogger(__name__)
         object_type, object_key, object_timestamp, timestamp = read_objects[object_type_str]['params']
         object_details = read_objects[object_type_str]['objs']
 
@@ -138,6 +145,8 @@ def stream_to_firehose(object_type_str):
                     app_logger.error('Getting new batch of data for {}\n'.format(key))
                     print('Getting new batch of data for {}\n'.format(key))
                     print(query_time)
+                    app_logger.error('Getting new batch of data for {}\n'.format(key))
+                    app_logger.error(query_time)
                     records = get_sql_records(object_type, object_key, object_timestamp, key, query_time, db_buffer)
 
                     if not records:
@@ -149,14 +158,7 @@ def stream_to_firehose(object_type_str):
                     sql_results[key]['data'] = data
                     sql_results[key]['max_records'] = len(data)
                     sql_results[key]['current_record'] = 0
-                    #print(data[-1])
                     sql_results[key]['start_time'] = data[-1].timestamp
-
-                    #print('\n\n')
-                    #print(sql_results[key]['max_records'])
-                    #print(sql_results[key]['current_record'])
-
-                    #time.sleep(5)
 
                 else:
                     data = sql_results[key]['data']
@@ -173,8 +175,14 @@ def stream_to_firehose(object_type_str):
                 msg['name'] = objs_metadata[result['key']][0]
                 msg['type'] = objs_metadata[result['key']][1]
 
+                #print(msg)
+
                 records_to_timestream_format(msg, timestream_write_client, object_type_str)
-                #kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
+                result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
+
+                if result['ResponseMetadata']['HTTPStatusCode'] != 200:
+                    print('Status: ' + str(result['ResponseMetadata']))
+                    app_logger.error('Status: ' + str(result['ResponseMetadata']))
 
             time.sleep(5)
 
@@ -204,7 +212,7 @@ if __name__ == '__main__':
 
     #object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec', 'sav', 'vav']
     object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec']
-    #object_types = ['damper', 'fan']
+    #object_types = ['ahu']
     #object_types = ['vfd', 'damper', 'hec', 'sav', 'vav']
     #object_types = ['thermafuser']
 
