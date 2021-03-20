@@ -282,7 +282,7 @@ if __name__ == '__main__':
     """
 
     try:
-        with concurrent.futures.ThreadPoolExecutor() as executor:
+        with concurrent.futures.ThreadPoolExecutor(len(object_types)) as executor:
             executor.map(stream_to_firehose, object_types)
     except (KeyboardInterrupt, SystemExit):
         sys.exit()
