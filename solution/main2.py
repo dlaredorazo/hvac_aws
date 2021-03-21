@@ -143,7 +143,7 @@ def stream_to_firehose(object_type_str):
 
                 if sql_results[key]['current_record'] == sql_results[key]['max_records']:
 
-                    query_time = sql_results[key]['start_time']
+                    query_time = sql_results[key]['data'][-1].timestamp
                     query_time = query_time + datetime.timedelta(seconds=time_delta_secs)
                     app_logger.error('Getting new batch of data for {}\n'.format(key))
                     print('Getting new batch of data for {}\n'.format(key))
@@ -161,7 +161,7 @@ def stream_to_firehose(object_type_str):
                     sql_results[key]['data'] = data
                     sql_results[key]['max_records'] = len(data)
                     sql_results[key]['current_record'] = 0
-                    sql_results[key]['start_time'] = data[-1].timestamp
+                    sql_results[key]['start_time'] = query_time
 
                 else:
                     data = sql_results[key]['data']
@@ -180,6 +180,7 @@ def stream_to_firehose(object_type_str):
 
                 #print(msg)
 
+                """
                 records_to_timestream_format(msg, timestream_write_client, object_type_str)
                 result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
 
@@ -190,6 +191,7 @@ def stream_to_firehose(object_type_str):
                     app_logger.error(traceback.print_exc())
 
             time.sleep(5)
+            """
 
         except Exception as e:
             app_logger.error(e)
