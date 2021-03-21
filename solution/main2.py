@@ -180,7 +180,6 @@ def stream_to_firehose(object_type_str):
 
                 #print(msg)
 
-                """
                 records_to_timestream_format(msg, timestream_write_client, object_type_str)
                 result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
 
@@ -191,7 +190,6 @@ def stream_to_firehose(object_type_str):
                     app_logger.error(traceback.print_exc())
 
             time.sleep(5)
-            """
 
         except Exception as e:
             app_logger.error(e)
