@@ -68,6 +68,7 @@ if __name__ == '__main__':
 
     thermafuser_df_windowed = thermafuser_df.copy()
 
+    #Create rolling windows
     thermafuser_df_windowed['AirflowRoll'] = thermafuser_df['AirflowFeedback'].rolling(window=12).mean()
     thermafuser_df_windowed['SupplyAirRoll'] = thermafuser_df['SupplyAir'].rolling(window=12).mean()
     thermafuser_df_windowed['ZoneTemperatureRoll'] = thermafuser_df['ZoneTemperature'].rolling(window=12).mean()
@@ -96,12 +97,59 @@ def input_fn(input_data, content_type):
     and unlabelled data we first determine whether the label column is present
     by looking at how many columns were provided.
     """
+
+    day_quarters = {0: '0-5', 1: '6-11', 2: '12-17', 3: '18-23'}
+
+    # To ensure that all of the quarters are created
+    fake_entries = {'time': [None, None, None, None], 'airflowFeedback': [None, None, None, None],
+                    'occupiedCoolingSetpoint': [None, None, None, None], 'roomOccupied': [None, None, None, None],
+                    'roomOccupied': [None, None, None, None], 'supplyAir': [None, None, None, None],
+                    'terminalLoad': [None, None, None, None], 'zoneTemperature': [None, None, None, None],
+                    'Day quarter': [0, 1, 2, 3]
+                    }
+    quarters_df = pd.DataFrame(fake_entries)
+
+
     if content_type == 'text/csv':
         # Read the raw input data as CSV.
-        df = pd.read_csv(StringIO(input_data),
-                         header=None)
+        #df = pd.read_csv(StringIO(input_data), header=None)
+        #return df
+        print("csv input type")
+        pass
 
-        return df
+    if content_type == 'application/json':
+
+        res_df = pd.read_json(input_data)
+        res_df = res_df.reset_index()
+
+        #Create day quarters
+        res_df['Day quarter'] = res_df['time'].map(lambda x: x.hour // 6)
+        concat_df = pd.concat([res_df, quarters_df], axis=0)
+        dummies = pd.get_dummies(concat_df['Day quarter'])
+        concat_df = pd.concat([concat_df, dummies], axis=1)
+        concat_df.rename(columns=day_quarters, inplace=True)
+
+        #Delete fake quarter entries
+        concat_df = concat_df.dropna(axis=0, subset=['time'])
+
+        #Create rolling windows
+        concat_df['AirflowRoll'] = concat_df['airflowFeedback'].rolling(window=12).mean()
+        concat_df['SupplyAirRoll'] = concat_df['supplyAir'].rolling(window=12).mean()
+        concat_df['ZoneTemperatureRoll'] = concat_df['zoneTemperature'].rolling(window=12).mean()
+
+        concat_df['0-5 Roll'] = concat_df['0-5'].rolling(window=12).median()
+        concat_df['6-11 Roll'] = concat_df['6-11'].rolling(window=12).median()
+        concat_df['12-17 Roll'] = concat_df['12-17'].rolling(window=12).median()
+        concat_df['18-23 Roll'] = concat_df['18-23'].rolling(window=21).median()
+
+        #Keep only the interesting columns
+
+        predict_df = concat_df[['AirflowRoll', 'SupplyAirRoll', 'ZoneTemperatureRoll', '0-5 Roll', '6-11 Roll', '12-17 Roll', '18-23 Roll']]
+        predict_df = predict_df.dropna()
+
+        return predict_df
+
+
     else:
         raise ValueError("{} not supported by script!".format(content_type))
 
@@ -117,7 +165,7 @@ def output_fn(prediction, response_content_type):
 
         return prediction
     elif response_content_type == 'text/csv':
-        return worker.Response(encoders.encode(prediction, response_content_type), mimetype=response_content_type)
+        return "csv content type"
     else:
         raise Exception("{} accept type is not supported by this script.".format(response_content_type))
 
@@ -131,7 +179,7 @@ def predict_fn(input_data, model):
 
         rest of features either one hot encoded or standardized
     """
-    pred = model.transform(input_data)
+    pred = model.predict(input_data)
     return pred
 
 
