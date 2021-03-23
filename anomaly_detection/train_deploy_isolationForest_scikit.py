@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import joblib
 import json
+import pickle
 
 from io import StringIO
 
@@ -169,10 +170,19 @@ def output_fn(prediction, response_content_type):
     container can read the response payload correctly.
     """
     if response_content_type == "application/json":
-
-        return prediction
+        print('json return')
+        return("json content type")
     elif response_content_type == 'text/csv':
+        print("csv return")
         return "csv content type"
+    elif response_content_type == 'application/x-npy':
+        print('return numpy')
+        #serialized = pickle.dumps(prediction)
+        json_output = prediction.tolist()
+
+        return worker.Response(json.dumps(json_output), mimetype=response_content_type)
+
+        #return json.dumps(serialized)
     else:
         raise Exception("{} accept type is not supported by this script.".format(response_content_type))
 
