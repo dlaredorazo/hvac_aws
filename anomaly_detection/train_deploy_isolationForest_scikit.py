@@ -73,18 +73,20 @@ if __name__ == '__main__':
     thermafuser_df_windowed['SupplyAirRoll'] = thermafuser_df['SupplyAir'].rolling(window=12).mean()
     thermafuser_df_windowed['ZoneTemperatureRoll'] = thermafuser_df['ZoneTemperature'].rolling(window=12).mean()
 
-    thermafuser_df_windowed['0-5 Roll'] = thermafuser_df['0-5'].rolling(window=12).median()
-    thermafuser_df_windowed['6-11 Roll'] = thermafuser_df['6-11'].rolling(window=12).median()
-    thermafuser_df_windowed['12-17 Roll'] = thermafuser_df['12-17'].rolling(window=12).median()
-    thermafuser_df_windowed['18-23 Roll'] = thermafuser_df['18-23'].rolling(window=21).median()
+    thermafuser_df_windowed['0-5Roll'] = thermafuser_df['0-5'].rolling(window=12).median()
+    thermafuser_df_windowed['6-11Roll'] = thermafuser_df['6-11'].rolling(window=12).median()
+    thermafuser_df_windowed['12-17Roll'] = thermafuser_df['12-17'].rolling(window=12).median()
+    thermafuser_df_windowed['18-23Roll'] = thermafuser_df['18-23'].rolling(window=21).median()
 
     thermafuser_df_windowed = thermafuser_df_windowed[['AirflowRoll', 'SupplyAirRoll', 'ZoneTemperatureRoll',
-                                                       '0-5 Roll', '6-11 Roll', '12-17 Roll', '18-23 Roll']]
+                                                       '0-5Roll', '6-11Roll', '12-17Roll', '18-23Roll']]
     thermafuser_df_windowed = thermafuser_df_windowed.dropna()
+
+    train_df = thermafuser_df_windowed[['AirflowRoll', 'SupplyAirRoll', 'ZoneTemperatureRoll', '0-5Roll', '6-11Roll', '12-17Roll', '18-23Roll']]
 
     clf = IsolationForest(n_estimators=args.n_estimators, max_samples='auto', contamination=args.contamination, max_features=args.max_features,
                           bootstrap=False, n_jobs=1, verbose=1)
-    clf.fit(thermafuser_df)
+    clf.fit(train_df)
 
     # Save the model to the location specified by args.model_dir
     joblib.dump(clf, os.path.join(args.model_dir, "model.joblib"))
@@ -119,10 +121,15 @@ def input_fn(input_data, content_type):
 
     if content_type == 'application/json':
 
-        res_df = pd.read_json(input_data)
+        #print(input_data)
+
+        payload = json.loads(input_data)
+        res_df = pd.read_json(payload)
+        print(res_df.head())
         res_df = res_df.reset_index()
 
         #Create day quarters
+        res_df['time'] = pd.to_datetime(res_df['time'])
         res_df['Day quarter'] = res_df['time'].map(lambda x: x.hour // 6)
         concat_df = pd.concat([res_df, quarters_df], axis=0)
         dummies = pd.get_dummies(concat_df['Day quarter'])
@@ -137,14 +144,14 @@ def input_fn(input_data, content_type):
         concat_df['SupplyAirRoll'] = concat_df['supplyAir'].rolling(window=12).mean()
         concat_df['ZoneTemperatureRoll'] = concat_df['zoneTemperature'].rolling(window=12).mean()
 
-        concat_df['0-5 Roll'] = concat_df['0-5'].rolling(window=12).median()
-        concat_df['6-11 Roll'] = concat_df['6-11'].rolling(window=12).median()
-        concat_df['12-17 Roll'] = concat_df['12-17'].rolling(window=12).median()
-        concat_df['18-23 Roll'] = concat_df['18-23'].rolling(window=21).median()
+        concat_df['0-5Roll'] = concat_df['0-5'].rolling(window=12).median()
+        concat_df['6-11Roll'] = concat_df['6-11'].rolling(window=12).median()
+        concat_df['12-17Roll'] = concat_df['12-17'].rolling(window=12).median()
+        concat_df['18-23Roll'] = concat_df['18-23'].rolling(window=21).median()
 
         #Keep only the interesting columns
 
-        predict_df = concat_df[['AirflowRoll', 'SupplyAirRoll', 'ZoneTemperatureRoll', '0-5 Roll', '6-11 Roll', '12-17 Roll', '18-23 Roll']]
+        predict_df = concat_df[['AirflowRoll', 'SupplyAirRoll', 'ZoneTemperatureRoll', '0-5Roll', '6-11Roll', '12-17Roll', '18-23Roll']]
         predict_df = predict_df.dropna()
 
         return predict_df
