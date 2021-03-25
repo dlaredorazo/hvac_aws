@@ -87,7 +87,7 @@ def get_sql_records(object_type, object_key, object_timestamp, key, timestamp, l
 
     sqlsession, sqlengine = auxiliary.connect_to_db('factory2.czy5c8ouxr1q.us-west-2.rds.amazonaws.com', 'hvac2018_04', 'admin', 'Dexsys131')
 
-    q = sqlsession.query(object_type).filter(and_(object_key == key, object_timestamp >= timestamp))
+    q = sqlsession.query(object_type).filter(and_(object_key == key, object_timestamp > timestamp))
 
     results = q.limit(limit).all()
 
@@ -97,7 +97,7 @@ def get_sql_records(object_type, object_key, object_timestamp, key, timestamp, l
 def stream_to_firehose(object_type_str):
 
     sql_results = {}
-    db_buffer = 1000
+    db_buffer = 5
     time_delta_secs = 5
 
     print('Writing data to streams: ' + object_type_str)
@@ -133,19 +133,17 @@ def stream_to_firehose(object_type_str):
 
         #print(sql_results)
 
-        stream_results = []
-
         try:
 
             for key in sql_results.keys():
 
-                data = []
-
                 if sql_results[key]['current_record'] == sql_results[key]['max_records']:
+
+                    data = []
+                    stream_results = []
 
                     query_time = sql_results[key]['data'][-1].timestamp
                     query_time = query_time + datetime.timedelta(seconds=time_delta_secs)
-                    app_logger.error('Getting new batch of data for {}\n'.format(key))
                     print('Getting new batch of data for {}\n'.format(key))
                     print(query_time)
                     app_logger.error('Getting new batch of data for {}\n'.format(key))
@@ -165,31 +163,29 @@ def stream_to_firehose(object_type_str):
 
                 else:
                     data = sql_results[key]['data']
-                    result = {'res':data[sql_results[key]['current_record']], 'key':key}
-                    stream_results.append(result)
+
+                    msg = data[sql_results[key]['current_record']].to_json()
+                    msg['timestamp'] = str(datetime.datetime.now())
+                    msg['timestamp_timestream'] = str(int(round(datetime.datetime.now().timestamp()*1000)))
+                    msg['factoryId'] = 'Octank Oregon'
+                    msg['objectId'] = str(key)
+                    msg['name'] = objs_metadata[key][0]
+                    msg['type'] = objs_metadata[key][1]
+
                     sql_results[key]['current_record'] = sql_results[key]['current_record'] + 1
 
-            for result in stream_results:
-                msg = result['res'].to_json()
-                msg['timestamp'] = str(datetime.datetime.now())
-                msg['timestamp_timestream'] = str(int(round(datetime.datetime.now().timestamp()*1000)))
-                msg['factoryId'] = 'Octank Oregon'
-                msg['objectId'] = str(result['key'])
-                msg['name'] = objs_metadata[result['key']][0]
-                msg['type'] = objs_metadata[result['key']][1]
+                    #print(msg)
 
-                #print(msg)
+                    records_to_timestream_format(msg, timestream_write_client, object_type_str)
+                    result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
 
-                records_to_timestream_format(msg, timestream_write_client, object_type_str)
-                result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
+                    if result['ResponseMetadata']['HTTPStatusCode'] != 200:
+                        print('Status: ' + str(result['ResponseMetadata']))
+                        app_logger.error('Status: ' + str(result['ResponseMetadata']))
+                        print(traceback.print_exc())
+                        app_logger.error(traceback.print_exc())
 
-                if result['ResponseMetadata']['HTTPStatusCode'] != 200:
-                    print('Status: ' + str(result['ResponseMetadata']))
-                    app_logger.error('Status: ' + str(result['ResponseMetadata']))
-                    print(traceback.print_exc())
-                    app_logger.error(traceback.print_exc())
-
-            time.sleep(5)
+            time.sleep(time_delta_secs)
 
         except Exception as e:
             app_logger.error(e)
