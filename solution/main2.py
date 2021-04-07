@@ -40,8 +40,8 @@ def records_to_timestream_format(record, timestream_write_client, obj_type_str):
     dimensions = [
         {'Name': 'Factory_Id', 'Value': record['factoryId']},
         {'Name': 'Component_Id', 'Value': record['objectId']},
-        {'Name': 'Component_Type', 'Value': record['name']},
-        {'Name': 'Component_Name', 'Value': record['type']},
+        {'Name': 'Component_Type', 'Value': record['type']},
+        {'Name': 'Component_Name', 'Value': record['name']},
     ]
 
     excludedKeys = set(['factoryId', 'objectId', 'name', 'type', 'timestamp', 'timestamp_timestream'])
@@ -174,8 +174,11 @@ def stream_to_firehose(object_type_str):
 
                     sql_results[key]['current_record'] = sql_results[key]['current_record'] + 1
 
-                    #print(msg)
+                    print(msg)
+                    print('\n')
+                    print(sys.getsizeof(msg))
 
+                    """
                     records_to_timestream_format(msg, timestream_write_client, object_type_str)
                     result = kinesis_client.put_record(DeliveryStreamName=stream_name, Record={'Data':json.dumps(msg)})
 
@@ -184,6 +187,7 @@ def stream_to_firehose(object_type_str):
                         app_logger.error('Status: ' + str(result['ResponseMetadata']))
                         print(traceback.print_exc())
                         app_logger.error(traceback.print_exc())
+                    """
 
             time.sleep(time_delta_secs)
 
@@ -212,8 +216,8 @@ if __name__ == '__main__':
     #stream_to_kinesis()
 
     #object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec', 'sav', 'vav']
-    object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec']
-    #object_types = ['ahu']
+    #object_types = ['thermafuser', 'ahu', 'vfd', 'filter', 'damper', 'fan', 'hec']
+    object_types = ['ahu']
     #object_types = ['vfd', 'damper', 'hec', 'sav', 'vav']
     #object_types = ['thermafuser']
 
